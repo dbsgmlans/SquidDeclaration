@@ -59,12 +59,11 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      cursor: grab;
     }
 
     .number {
-      font-weight: bold;
       width: 30px;
+      font-weight: bold;
     }
 
     .text {
@@ -76,10 +75,6 @@
       padding: 5px 8px;
       border-radius: 5px;
       cursor: pointer;
-    }
-
-    .dragging {
-      opacity: 0.5;
     }
   </style>
 </head>
@@ -96,97 +91,61 @@
     <ul id="list"></ul>
   </div>
 
+  <!-- 🔥 Firebase CDN -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+
   <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyARCJuDrfDTlo-H-3mfnFbFTuYAh-3-LlM",
+      authDomain: "squid-4f3c7.firebaseapp.com",
+      projectId: "squid-4f3c7",
+      storageBucket: "squid-4f3c7.firebasestorage.app",
+      messagingSenderId: "967411396706",
+      appId: "1:967411396706:web:349c2ba7615fe872e9213b"
+    };
+
+    // Firebase 초기화
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
     const input = document.getElementById("input");
     const list = document.getElementById("list");
 
-    let items = JSON.parse(localStorage.getItem("quotes")) || [];
+    // 🔥 실시간 데이터 불러오기
+    db.collection("quotes").orderBy("createdAt", "desc")
+      .onSnapshot(snapshot => {
+        list.innerHTML = "";
+        let index = 1;
 
-    function saveItems() {
-      localStorage.setItem("quotes", JSON.stringify(items));
-    }
+        snapshot.forEach(doc => {
+          const data = doc.data();
 
-    function render() {
-      list.innerHTML = "";
-      items.forEach((text, index) => {
-        const li = document.createElement("li");
-        li.draggable = true;
+          const li = document.createElement("li");
+          li.innerHTML = `
+            <span class="number">${index++}.</span>
+            <span class="text">${data.text}</span>
+            <span class="delete" onclick="deleteItem('${doc.id}')">삭제</span>
+          `;
 
-        li.innerHTML = `
-          <span class="number">${index + 1}.</span>
-          <span class="text">${text}</span>
-          <span class="delete" onclick="removeItem(${index})">삭제</span>
-        `;
-
-        // 드래그 이벤트
-        li.addEventListener("dragstart", () => {
-          li.classList.add("dragging");
+          list.appendChild(li);
         });
-
-        li.addEventListener("dragend", () => {
-          li.classList.remove("dragging");
-          updateOrder();
-        });
-
-        list.appendChild(li);
       });
-    }
 
     function addItem() {
       const text = input.value.trim();
       if (text === "") return;
 
-      items.unshift(text);
-      saveItems();
-      render();
+      db.collection("quotes").add({
+        text: text,
+        createdAt: new Date()
+      });
 
       input.value = "";
     }
 
-    function removeItem(index) {
-      items.splice(index, 1);
-      saveItems();
-      render();
-    }
-
-    // 🔥 드래그 위치 계산
-    list.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      const afterElement = getDragAfterElement(list, e.clientY);
-      const dragging = document.querySelector(".dragging");
-
-      if (afterElement == null) {
-        list.appendChild(dragging);
-      } else {
-        list.insertBefore(dragging, afterElement);
-      }
-    });
-
-    function getDragAfterElement(container, y) {
-      const elements = [...container.querySelectorAll("li:not(.dragging)")];
-
-      return elements.reduce((closest, child) => {
-        const box = child.getBoundingClientRect();
-        const offset = y - box.top - box.height / 2;
-
-        if (offset < 0 && offset > closest.offset) {
-          return { offset: offset, element: child };
-        } else {
-          return closest;
-        }
-      }, { offset: Number.NEGATIVE_INFINITY }).element;
-    }
-
-    // 🔥 순서 업데이트 + 저장
-    function updateOrder() {
-      const newItems = [];
-      document.querySelectorAll("#list li .text").forEach(el => {
-        newItems.push(el.textContent);
-      });
-
-      items = newItems;
-      saveItems();
-      render();
+    function deleteItem(id) {
+      db.collection("quotes").doc(id).delete();
     }
 
     input.addEventListener("keypress", function(e) {
@@ -194,8 +153,6 @@
         addItem();
       }
     });
-
-    render();
   </script>
 </body>
 </html>
