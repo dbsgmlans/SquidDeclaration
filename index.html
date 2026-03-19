@@ -2,13 +2,14 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>오징어 어록 채팅방</title>
+  <title>징어 어록 채팅방</title>
 
   <style>
     body {
       font-family: Arial;
-      background: linear-gradient(to bottom, #4facfe, #00c6ff, #0072ff);
-      color: white;
+      /* 🎨 파스텔 하늘색 */
+      background: #bde0fe;
+      color: #333;
       display: flex;
       justify-content: center;
       margin-top: 50px;
@@ -16,13 +17,14 @@
 
     .container {
       width: 700px;
-      background: rgba(0, 0, 0, 0.75);
+      background: rgba(255, 255, 255, 0.9);
       padding: 20px;
       border-radius: 15px;
     }
 
     h1 {
       text-align: center;
+      color: #333;
     }
 
     .input-area {
@@ -33,15 +35,15 @@
     input {
       flex: 1;
       padding: 12px;
-      border: none;
+      border: 1px solid #ccc;
       border-radius: 5px;
     }
 
     button {
       padding: 12px;
       border: none;
-      background: #ff4757;
-      color: white;
+      background: #a2d2ff;
+      color: #333;
       border-radius: 5px;
       cursor: pointer;
     }
@@ -53,17 +55,18 @@
     }
 
     li {
-      background: #1e1e1e;
+      background: #e9ecef;
       padding: 12px;
       margin-bottom: 12px;
       border-radius: 8px;
       display: flex;
       justify-content: space-between;
       font-size: 16px;
+      color: #333;
     }
 
     .delete {
-      background: #444;
+      background: #ccc;
       cursor: pointer;
       padding: 5px 8px;
       border-radius: 5px;
@@ -73,7 +76,7 @@
 
 <body>
   <div class="container">
-    <h1>🦑 오징어 어록</h1>
+    <h1>🦑 징어 어록</h1>
 
     <div class="input-area">
       <input id="input" type="text" placeholder="어록 입력..." />
@@ -87,7 +90,6 @@
     const input = document.getElementById("input");
     const list = document.getElementById("list");
 
-    // 🔥 저장된 데이터 불러오기
     let items = JSON.parse(localStorage.getItem("quotes")) || [];
 
     function saveItems() {
@@ -110,7 +112,7 @@
       const text = input.value.trim();
       if (text === "") return;
 
-      items.unshift(text); // 최신 위
+      items.unshift(text);
       saveItems();
       render();
 
@@ -123,14 +125,12 @@
       render();
     }
 
-    // 엔터 입력
     input.addEventListener("keypress", function(e) {
       if (e.key === "Enter") {
         addItem();
       }
     });
 
-    // 🔥 처음 실행 시 렌더링
     render();
   </script>
 </body>
