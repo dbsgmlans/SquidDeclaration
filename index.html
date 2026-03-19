@@ -7,7 +7,6 @@
   <style>
     body {
       font-family: Arial;
-      /* 🎨 파스텔 하늘색 */
       background: #bde0fe;
       color: #333;
       display: flex;
@@ -24,7 +23,6 @@
 
     h1 {
       text-align: center;
-      color: #333;
     }
 
     .input-area {
@@ -43,7 +41,6 @@
       padding: 12px;
       border: none;
       background: #a2d2ff;
-      color: #333;
       border-radius: 5px;
       cursor: pointer;
     }
@@ -57,19 +54,32 @@
     li {
       background: #e9ecef;
       padding: 12px;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       border-radius: 8px;
       display: flex;
-      justify-content: space-between;
-      font-size: 16px;
-      color: #333;
+      align-items: center;
+      gap: 10px;
+      cursor: grab;
+    }
+
+    .number {
+      font-weight: bold;
+      width: 30px;
+    }
+
+    .text {
+      flex: 1;
     }
 
     .delete {
       background: #ccc;
-      cursor: pointer;
       padding: 5px 8px;
       border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .dragging {
+      opacity: 0.5;
     }
   </style>
 </head>
@@ -100,10 +110,24 @@
       list.innerHTML = "";
       items.forEach((text, index) => {
         const li = document.createElement("li");
+        li.draggable = true;
+
         li.innerHTML = `
-          <span>${text}</span>
+          <span class="number">${index + 1}.</span>
+          <span class="text">${text}</span>
           <span class="delete" onclick="removeItem(${index})">삭제</span>
         `;
+
+        // 드래그 이벤트
+        li.addEventListener("dragstart", () => {
+          li.classList.add("dragging");
+        });
+
+        li.addEventListener("dragend", () => {
+          li.classList.remove("dragging");
+          updateOrder();
+        });
+
         list.appendChild(li);
       });
     }
@@ -121,6 +145,46 @@
 
     function removeItem(index) {
       items.splice(index, 1);
+      saveItems();
+      render();
+    }
+
+    // 🔥 드래그 위치 계산
+    list.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      const afterElement = getDragAfterElement(list, e.clientY);
+      const dragging = document.querySelector(".dragging");
+
+      if (afterElement == null) {
+        list.appendChild(dragging);
+      } else {
+        list.insertBefore(dragging, afterElement);
+      }
+    });
+
+    function getDragAfterElement(container, y) {
+      const elements = [...container.querySelectorAll("li:not(.dragging)")];
+
+      return elements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+
+        if (offset < 0 && offset > closest.offset) {
+          return { offset: offset, element: child };
+        } else {
+          return closest;
+        }
+      }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    // 🔥 순서 업데이트 + 저장
+    function updateOrder() {
+      const newItems = [];
+      document.querySelectorAll("#list li .text").forEach(el => {
+        newItems.push(el.textContent);
+      });
+
+      items = newItems;
       saveItems();
       render();
     }
