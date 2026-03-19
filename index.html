@@ -96,7 +96,6 @@
     <ul id="list"></ul>
   </div>
 
-  <!-- Firebase v8 (중요) -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
@@ -116,23 +115,38 @@
     const input = document.getElementById("input");
     const list = document.getElementById("list");
 
-    // 🔥 실시간 불러오기 (order 기준)
-    db.collection("quotes").orderBy("createdAt")
+    // 🔥 핵심: 전체 불러오고 JS에서 정렬
+    db.collection("quotes")
       .onSnapshot(snapshot => {
         list.innerHTML = "";
-        let index = 1;
+
+        let docs = [];
 
         snapshot.forEach(doc => {
-          const data = doc.data();
+          docs.push({
+            id: doc.id,
+            ...doc.data()
+          });
+        });
 
+        // 🔥 createdAt 기준 정렬 (없으면 뒤로)
+        docs.sort((a, b) => {
+          if (!a.createdAt) return 1;
+          if (!b.createdAt) return -1;
+          return b.createdAt.seconds - a.createdAt.seconds;
+        });
+
+        let index = 1;
+
+        docs.forEach(data => {
           const li = document.createElement("li");
           li.draggable = true;
-          li.dataset.id = doc.id;
+          li.dataset.id = data.id;
 
           li.innerHTML = `
             <span class="number">${index++}.</span>
             <span class="text">${data.text}</span>
-            <span class="delete" onclick="deleteItem('${doc.id}')">삭제</span>
+            <span class="delete" onclick="deleteItem('${data.id}')">삭제</span>
           `;
 
           li.addEventListener("dragstart", () => {
@@ -174,7 +188,6 @@
       db.collection("quotes").doc(id).delete();
     }
 
-    // 드래그 위치 계산
     list.addEventListener("dragover", (e) => {
       e.preventDefault();
 
