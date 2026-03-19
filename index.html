@@ -1,96 +1,78 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <title>징어 어록 채팅방</title>
+<meta charset="UTF-8">
+<title>징어 어록</title>
 
-  <style>
-    body {
-      font-family: Arial;
-      background: #bde0fe;
-      display: flex;
-      justify-content: center;
-      margin-top: 50px;
-    }
+<style>
+body {
+  font-family: Arial;
+  background: #bde0fe;
+  display: flex;
+  justify-content: center;
+  margin-top: 50px;
+}
 
-    .container {
-      width: 700px;
-      background: rgba(255,255,255,0.9);
-      padding: 20px;
-      border-radius: 15px;
-    }
+.container {
+  width: 700px;
+  background: rgba(255,255,255,0.9);
+  padding: 20px;
+  border-radius: 15px;
+}
 
-    h1 { text-align: center; }
+.input-area, .search-area {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
 
-    .input-area, .search-area {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
+input { flex:1; padding:10px; }
+button { padding:10px; background:#a2d2ff; border:none; cursor:pointer; }
 
-    input {
-      flex: 1;
-      padding: 10px;
-    }
+ul { list-style:none; padding:0; }
 
-    button {
-      padding: 10px;
-      background: #a2d2ff;
-      border: none;
-      cursor: pointer;
-    }
+li {
+  background:#eee;
+  margin-bottom:8px;
+  padding:10px;
+  display:flex;
+  gap:10px;
+  align-items:center;
+  border-radius:8px;
+}
 
-    ul { list-style: none; padding: 0; }
+.pinned {
+  background: #ffd166;
+}
 
-    li {
-      background: #eee;
-      margin-bottom: 8px;
-      padding: 10px;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      border-radius: 8px;
-      cursor: grab;
-    }
+.number { width:30px; }
+.text { flex:1; }
 
-    .number { width: 30px; }
-    .text { flex: 1; }
+.btn {
+  cursor:pointer;
+  padding:3px 6px;
+  background:#ccc;
+  border-radius:5px;
+}
 
-    .delete, .edit {
-      cursor: pointer;
-      padding: 3px 6px;
-      background: #ccc;
-      border-radius: 5px;
-    }
-
-    .dragging { opacity: 0.5; }
-
-    .notice {
-      font-size: 12px;
-      color: #666;
-      text-align: center;
-    }
-  </style>
+.dragging { opacity:0.5; }
+</style>
 </head>
 
 <body>
 <div class="container">
-  <h1>🦑 징어 어록</h1>
+<h1>🦑 징어 어록</h1>
 
-  <!-- 🔍 검색 -->
-  <div class="search-area">
-    <input id="search" placeholder="검색..." oninput="renderList()" />
-  </div>
+<div class="search-area">
+<input id="search" placeholder="검색..." oninput="renderList()" />
+</div>
 
-  <div class="notice">※ 검색 중에는 드래그 정렬이 비활성화됩니다</div>
+<div class="input-area">
+<input id="input" placeholder="어록 입력..." />
+<button onclick="addItem()">추가</button>
+</div>
 
-  <!-- 입력 -->
-  <div class="input-area">
-    <input id="input" placeholder="어록 입력..." />
-    <button onclick="addItem()">추가</button>
-  </div>
-
-  <ul id="list"></ul>
+<ul id="list"></ul>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -100,7 +82,7 @@
 const firebaseConfig = {
   apiKey: "AIzaSyARCJuDrfDTlo-H-3mfnFbFTuYAh-3-LlM",
   authDomain: "squid-4f3c7.firebaseapp.com",
-  projectId: "squid-4f3c7",
+  projectId: "squid-4f3c7"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -112,7 +94,7 @@ const searchInput = document.getElementById("search");
 
 let allData = [];
 
-// 🔥 데이터 불러오기
+// 데이터 불러오기
 db.collection("quotes").onSnapshot(snapshot => {
   allData = [];
   snapshot.forEach(doc => {
@@ -121,7 +103,7 @@ db.collection("quotes").onSnapshot(snapshot => {
   renderList();
 });
 
-// 🔍 + 🎯 렌더링
+// 렌더링
 function renderList() {
   list.innerHTML = "";
 
@@ -131,11 +113,17 @@ function renderList() {
     item.text && item.text.toLowerCase().includes(keyword)
   );
 
-  // 🔥 order 우선, 없으면 createdAt
+  // 🔥 정렬 핵심
   filtered.sort((a, b) => {
-    if (a.order != null && b.order != null) return a.order - b.order;
+
+    // 1️⃣ 핀 먼저
+    if (a.pinned && !b.pinned) return -1;
+    if (!a.pinned && b.pinned) return 1;
+
+    // 2️⃣ 일반 글은 최신순
     if (!a.createdAt) return 1;
     if (!b.createdAt) return -1;
+
     return b.createdAt.seconds - a.createdAt.seconds;
   });
 
@@ -144,8 +132,10 @@ function renderList() {
   filtered.forEach(data => {
     const li = document.createElement("li");
 
-    // 🔥 검색 중이면 드래그 OFF
-    if (!keyword) {
+    if (data.pinned) li.classList.add("pinned");
+
+    // 🔥 핀 아닌 것만 드래그 가능 + 검색 아닐 때만
+    if (!data.pinned && !keyword) {
       li.draggable = true;
 
       li.addEventListener("dragstart", () => li.classList.add("dragging"));
@@ -153,7 +143,7 @@ function renderList() {
       li.addEventListener("dragend", async () => {
         li.classList.remove("dragging");
 
-        const elements = [...document.querySelectorAll("#list li")];
+        const elements = [...document.querySelectorAll("#list li:not(.pinned)")];
 
         for (let i = 0; i < elements.length; i++) {
           const id = elements[i].dataset.id;
@@ -167,15 +157,18 @@ function renderList() {
     li.innerHTML = `
       <span class="number">${index++}</span>
       <span class="text">${data.text}</span>
-      <span class="edit" onclick="editItem('${data.id}', \`${data.text}\`)">수정</span>
-      <span class="delete" onclick="deleteItem('${data.id}')">삭제</span>
+      <span class="btn" onclick="togglePin('${data.id}', ${data.pinned ? false : true})">
+        ${data.pinned ? "📌해제" : "📌"}
+      </span>
+      <span class="btn" onclick="editItem('${data.id}', \`${data.text}\`)">수정</span>
+      <span class="btn" onclick="deleteItem('${data.id}')">삭제</span>
     `;
 
     list.appendChild(li);
   });
 }
 
-// ➕ 추가
+// 추가 (핀 아래 최상단)
 function addItem() {
   const text = input.value.trim();
   if (!text) return;
@@ -183,24 +176,29 @@ function addItem() {
   db.collection("quotes").add({
     text,
     createdAt: new Date(),
-    order: Date.now()
+    pinned: false
   });
 
   input.value = "";
 }
 
-// ❌ 삭제
+// 삭제
 function deleteItem(id) {
   db.collection("quotes").doc(id).delete();
 }
 
-// ✏️ 수정
+// 수정
 function editItem(id, oldText) {
   const newText = prompt("수정:", oldText);
   if (!newText) return;
 
+  db.collection("quotes").doc(id).update({ text: newText });
+}
+
+// 핀 토글
+function togglePin(id, value) {
   db.collection("quotes").doc(id).update({
-    text: newText
+    pinned: value
   });
 }
 
@@ -221,14 +219,14 @@ list.addEventListener("dragover", (e) => {
 });
 
 function getDragAfterElement(container, y) {
-  const elements = [...container.querySelectorAll("li:not(.dragging)")];
+  const elements = [...container.querySelectorAll("li:not(.dragging):not(.pinned)")];
 
   return elements.reduce((closest, child) => {
     const box = child.getBoundingClientRect();
     const offset = y - box.top - box.height / 2;
 
     if (offset < 0 && offset > closest.offset) {
-      return { offset: offset, element: child };
+      return { offset, element: child };
     } else {
       return closest;
     }
