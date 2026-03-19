@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>오징어 어록 채팅방</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #111;
+      color: white;
+      display: flex;
+      justify-content: center;
+      margin-top: 50px;
+    }
+
+    .container {
+      width: 400px;
+      background: #1e1e1e;
+      padding: 20px;
+      border-radius: 10px;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    input {
+      width: 70%;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+    }
+
+    button {
+      padding: 10px;
+      border: none;
+      background: #ff4757;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin-top: 20px;
+    }
+
+    li {
+      background: #2f2f2f;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .delete {
+      background: #555;
+      cursor: pointer;
+      padding: 5px;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🦑 오징어 어록</h1>
+
+    <input id="input" type="text" placeholder="어록 입력..." />
+    <button onclick="addItem()">추가</button>
+
+    <ul id="list"></ul>
+  </div>
+
+  <script>
+    const input = document.getElementById("input");
+    const list = document.getElementById("list");
+
+    function addItem() {
+      const text = input.value.trim();
+      if (text === "") return;
+
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <span>${text}</span>
+        <span class="delete" onclick="removeItem(this)">삭제</span>
+      `;
+
+      // 최신이 위로 오게
+      list.prepend(li);
+
+      input.value = "";
+    }
+
+    function removeItem(el) {
+      el.parentElement.remove();
+    }
+
+    // 🔥 엔터키 입력
+    input.addEventListener("keypress", function(e) {
+      if (e.key === "Enter") {
+        addItem();
+      }
+    });
+  </script>
+</body>
+</html>
