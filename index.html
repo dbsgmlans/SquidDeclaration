@@ -59,6 +59,7 @@
       display: flex;
       align-items: center;
       gap: 10px;
+      cursor: grab;
     }
 
     .number {
@@ -76,6 +77,10 @@
       border-radius: 5px;
       cursor: pointer;
     }
+
+    .dragging {
+      opacity: 0.5;
+    }
   </style>
 </head>
 
@@ -91,7 +96,7 @@
     <ul id="list"></ul>
   </div>
 
-  <!-- 🔥 Firebase CDN -->
+  <!-- Firebase v8 (중요) -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
@@ -105,15 +110,14 @@
       appId: "1:967411396706:web:349c2ba7615fe872e9213b"
     };
 
-    // Firebase 초기화
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
     const input = document.getElementById("input");
     const list = document.getElementById("list");
 
-    // 🔥 실시간 데이터 불러오기
-    db.collection("quotes").orderBy("createdAt", "desc")
+    // 🔥 실시간 불러오기 (order 기준)
+    db.collection("quotes").orderBy("order")
       .onSnapshot(snapshot => {
         list.innerHTML = "";
         let index = 1;
@@ -122,11 +126,32 @@
           const data = doc.data();
 
           const li = document.createElement("li");
+          li.draggable = true;
+          li.dataset.id = doc.id;
+
           li.innerHTML = `
             <span class="number">${index++}.</span>
             <span class="text">${data.text}</span>
             <span class="delete" onclick="deleteItem('${doc.id}')">삭제</span>
           `;
+
+          li.addEventListener("dragstart", () => {
+            li.classList.add("dragging");
+          });
+
+          li.addEventListener("dragend", async () => {
+            li.classList.remove("dragging");
+
+            const elements = [...document.querySelectorAll("#list li")];
+
+            for (let i = 0; i < elements.length; i++) {
+              const id = elements[i].dataset.id;
+
+              await db.collection("quotes").doc(id).update({
+                order: i
+              });
+            }
+          });
 
           list.appendChild(li);
         });
@@ -138,7 +163,8 @@
 
       db.collection("quotes").add({
         text: text,
-        createdAt: new Date()
+        createdAt: new Date(),
+        order: Date.now()
       });
 
       input.value = "";
@@ -146,6 +172,35 @@
 
     function deleteItem(id) {
       db.collection("quotes").doc(id).delete();
+    }
+
+    // 드래그 위치 계산
+    list.addEventListener("dragover", (e) => {
+      e.preventDefault();
+
+      const dragging = document.querySelector(".dragging");
+      const afterElement = getDragAfterElement(list, e.clientY);
+
+      if (afterElement == null) {
+        list.appendChild(dragging);
+      } else {
+        list.insertBefore(dragging, afterElement);
+      }
+    });
+
+    function getDragAfterElement(container, y) {
+      const elements = [...container.querySelectorAll("li:not(.dragging)")];
+
+      return elements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+
+        if (offset < 0 && offset > closest.offset) {
+          return { offset: offset, element: child };
+        } else {
+          return closest;
+        }
+      }, { offset: Number.NEGATIVE_INFINITY }).element;
     }
 
     input.addEventListener("keypress", function(e) {
