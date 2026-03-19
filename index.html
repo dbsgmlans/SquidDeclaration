@@ -3,10 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <title>오징어 어록 채팅방</title>
+
   <style>
     body {
       font-family: Arial;
-      background: #111;
+      background: url("https://images.unsplash.com/photo-1507525428034-b723cf961d3e") no-repeat center;
+      background-size: cover;
       color: white;
       display: flex;
       justify-content: center;
@@ -15,7 +17,7 @@
 
     .container {
       width: 400px;
-      background: #1e1e1e;
+      background: rgba(30, 30, 30, 0.85);
       padding: 20px;
       border-radius: 10px;
     }
@@ -24,8 +26,14 @@
       text-align: center;
     }
 
+    /* 🔥 입력창 + 버튼 */
+    .input-area {
+      display: flex;
+      gap: 10px;
+    }
+
     input {
-      width: 70%;
+      flex: 1;
       padding: 10px;
       border: none;
       border-radius: 5px;
@@ -68,8 +76,10 @@
   <div class="container">
     <h1>🦑 오징어 어록</h1>
 
-    <input id="input" type="text" placeholder="어록 입력..." />
-    <button onclick="addItem()">추가</button>
+    <div class="input-area">
+      <input id="input" type="text" placeholder="어록 입력..." />
+      <button onclick="addItem()">추가</button>
+    </div>
 
     <ul id="list"></ul>
   </div>
@@ -88,9 +98,7 @@
         <span class="delete" onclick="removeItem(this)">삭제</span>
       `;
 
-      // 최신이 위로 오게
       list.prepend(li);
-
       input.value = "";
     }
 
@@ -98,7 +106,7 @@
       el.parentElement.remove();
     }
 
-    // 🔥 엔터키 입력
+    // 엔터키로 추가
     input.addEventListener("keypress", function(e) {
       if (e.key === "Enter") {
         addItem();
