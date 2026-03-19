@@ -8,7 +8,6 @@
     body {
       font-family: Arial;
       background: #bde0fe;
-      color: #333;
       display: flex;
       justify-content: center;
       margin-top: 50px;
@@ -16,211 +15,230 @@
 
     .container {
       width: 700px;
-      background: rgba(255, 255, 255, 0.9);
+      background: rgba(255,255,255,0.9);
       padding: 20px;
       border-radius: 15px;
     }
 
-    h1 {
-      text-align: center;
-    }
+    h1 { text-align: center; }
 
-    .input-area {
+    .input-area, .search-area {
       display: flex;
       gap: 10px;
+      margin-bottom: 10px;
     }
 
     input {
       flex: 1;
-      padding: 12px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
+      padding: 10px;
     }
 
     button {
-      padding: 12px;
-      border: none;
+      padding: 10px;
       background: #a2d2ff;
-      border-radius: 5px;
+      border: none;
       cursor: pointer;
     }
 
-    ul {
-      list-style: none;
-      padding: 0;
-      margin-top: 20px;
-    }
+    ul { list-style: none; padding: 0; }
 
     li {
-      background: #e9ecef;
-      padding: 12px;
-      margin-bottom: 10px;
-      border-radius: 8px;
+      background: #eee;
+      margin-bottom: 8px;
+      padding: 10px;
       display: flex;
-      align-items: center;
       gap: 10px;
+      align-items: center;
+      border-radius: 8px;
       cursor: grab;
     }
 
-    .number {
-      width: 30px;
-      font-weight: bold;
-    }
+    .number { width: 30px; }
+    .text { flex: 1; }
 
-    .text {
-      flex: 1;
-    }
-
-    .delete {
-      background: #ccc;
-      padding: 5px 8px;
-      border-radius: 5px;
+    .delete, .edit {
       cursor: pointer;
+      padding: 3px 6px;
+      background: #ccc;
+      border-radius: 5px;
     }
 
-    .dragging {
-      opacity: 0.5;
+    .dragging { opacity: 0.5; }
+
+    .notice {
+      font-size: 12px;
+      color: #666;
+      text-align: center;
     }
   </style>
 </head>
 
 <body>
-  <div class="container">
-    <h1>🦑 징어 어록</h1>
+<div class="container">
+  <h1>🦑 징어 어록</h1>
 
-    <div class="input-area">
-      <input id="input" type="text" placeholder="어록 입력..." />
-      <button onclick="addItem()">추가</button>
-    </div>
-
-    <ul id="list"></ul>
+  <!-- 🔍 검색 -->
+  <div class="search-area">
+    <input id="search" placeholder="검색..." oninput="renderList()" />
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <div class="notice">※ 검색 중에는 드래그 정렬이 비활성화됩니다</div>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyARCJuDrfDTlo-H-3mfnFbFTuYAh-3-LlM",
-      authDomain: "squid-4f3c7.firebaseapp.com",
-      projectId: "squid-4f3c7",
-      storageBucket: "squid-4f3c7.firebasestorage.app",
-      messagingSenderId: "967411396706",
-      appId: "1:967411396706:web:349c2ba7615fe872e9213b"
-    };
+  <!-- 입력 -->
+  <div class="input-area">
+    <input id="input" placeholder="어록 입력..." />
+    <button onclick="addItem()">추가</button>
+  </div>
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+  <ul id="list"></ul>
+</div>
 
-    const input = document.getElementById("input");
-    const list = document.getElementById("list");
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
-    // 🔥 핵심: 전체 불러오고 JS에서 정렬
-    db.collection("quotes")
-      .onSnapshot(snapshot => {
-        list.innerHTML = "";
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyARCJuDrfDTlo-H-3mfnFbFTuYAh-3-LlM",
+  authDomain: "squid-4f3c7.firebaseapp.com",
+  projectId: "squid-4f3c7",
+};
 
-        let docs = [];
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-        snapshot.forEach(doc => {
-          docs.push({
-            id: doc.id,
-            ...doc.data()
-          });
-        });
+const input = document.getElementById("input");
+const list = document.getElementById("list");
+const searchInput = document.getElementById("search");
 
-        // 🔥 createdAt 기준 정렬 (없으면 뒤로)
-        docs.sort((a, b) => {
-          if (!a.createdAt) return 1;
-          if (!b.createdAt) return -1;
-          return b.createdAt.seconds - a.createdAt.seconds;
-        });
+let allData = [];
 
-        let index = 1;
+// 🔥 데이터 불러오기
+db.collection("quotes").onSnapshot(snapshot => {
+  allData = [];
+  snapshot.forEach(doc => {
+    allData.push({ id: doc.id, ...doc.data() });
+  });
+  renderList();
+});
 
-        docs.forEach(data => {
-          const li = document.createElement("li");
-          li.draggable = true;
-          li.dataset.id = data.id;
+// 🔍 + 🎯 렌더링
+function renderList() {
+  list.innerHTML = "";
 
-          li.innerHTML = `
-            <span class="number">${index++}.</span>
-            <span class="text">${data.text}</span>
-            <span class="delete" onclick="deleteItem('${data.id}')">삭제</span>
-          `;
+  const keyword = searchInput.value.toLowerCase();
 
-          li.addEventListener("dragstart", () => {
-            li.classList.add("dragging");
-          });
+  let filtered = allData.filter(item =>
+    item.text && item.text.toLowerCase().includes(keyword)
+  );
 
-          li.addEventListener("dragend", async () => {
-            li.classList.remove("dragging");
+  // 🔥 order 우선, 없으면 createdAt
+  filtered.sort((a, b) => {
+    if (a.order != null && b.order != null) return a.order - b.order;
+    if (!a.createdAt) return 1;
+    if (!b.createdAt) return -1;
+    return b.createdAt.seconds - a.createdAt.seconds;
+  });
 
-            const elements = [...document.querySelectorAll("#list li")];
+  let index = 1;
 
-            for (let i = 0; i < elements.length; i++) {
-              const id = elements[i].dataset.id;
+  filtered.forEach(data => {
+    const li = document.createElement("li");
 
-              await db.collection("quotes").doc(id).update({
-                order: i
-              });
-            }
-          });
+    // 🔥 검색 중이면 드래그 OFF
+    if (!keyword) {
+      li.draggable = true;
 
-          list.appendChild(li);
-        });
-      });
+      li.addEventListener("dragstart", () => li.classList.add("dragging"));
 
-    function addItem() {
-      const text = input.value.trim();
-      if (text === "") return;
+      li.addEventListener("dragend", async () => {
+        li.classList.remove("dragging");
 
-      db.collection("quotes").add({
-        text: text,
-        createdAt: new Date(),
-        order: Date.now()
-      });
+        const elements = [...document.querySelectorAll("#list li")];
 
-      input.value = "";
-    }
-
-    function deleteItem(id) {
-      db.collection("quotes").doc(id).delete();
-    }
-
-    list.addEventListener("dragover", (e) => {
-      e.preventDefault();
-
-      const dragging = document.querySelector(".dragging");
-      const afterElement = getDragAfterElement(list, e.clientY);
-
-      if (afterElement == null) {
-        list.appendChild(dragging);
-      } else {
-        list.insertBefore(dragging, afterElement);
-      }
-    });
-
-    function getDragAfterElement(container, y) {
-      const elements = [...container.querySelectorAll("li:not(.dragging)")];
-
-      return elements.reduce((closest, child) => {
-        const box = child.getBoundingClientRect();
-        const offset = y - box.top - box.height / 2;
-
-        if (offset < 0 && offset > closest.offset) {
-          return { offset: offset, element: child };
-        } else {
-          return closest;
+        for (let i = 0; i < elements.length; i++) {
+          const id = elements[i].dataset.id;
+          await db.collection("quotes").doc(id).update({ order: i });
         }
-      }, { offset: Number.NEGATIVE_INFINITY }).element;
+      });
     }
 
-    input.addEventListener("keypress", function(e) {
-      if (e.key === "Enter") {
-        addItem();
-      }
-    });
-  </script>
+    li.dataset.id = data.id;
+
+    li.innerHTML = `
+      <span class="number">${index++}</span>
+      <span class="text">${data.text}</span>
+      <span class="edit" onclick="editItem('${data.id}', \`${data.text}\`)">수정</span>
+      <span class="delete" onclick="deleteItem('${data.id}')">삭제</span>
+    `;
+
+    list.appendChild(li);
+  });
+}
+
+// ➕ 추가
+function addItem() {
+  const text = input.value.trim();
+  if (!text) return;
+
+  db.collection("quotes").add({
+    text,
+    createdAt: new Date(),
+    order: Date.now()
+  });
+
+  input.value = "";
+}
+
+// ❌ 삭제
+function deleteItem(id) {
+  db.collection("quotes").doc(id).delete();
+}
+
+// ✏️ 수정
+function editItem(id, oldText) {
+  const newText = prompt("수정:", oldText);
+  if (!newText) return;
+
+  db.collection("quotes").doc(id).update({
+    text: newText
+  });
+}
+
+// 드래그 위치 계산
+list.addEventListener("dragover", (e) => {
+  e.preventDefault();
+
+  const dragging = document.querySelector(".dragging");
+  if (!dragging) return;
+
+  const afterElement = getDragAfterElement(list, e.clientY);
+
+  if (afterElement == null) {
+    list.appendChild(dragging);
+  } else {
+    list.insertBefore(dragging, afterElement);
+  }
+});
+
+function getDragAfterElement(container, y) {
+  const elements = [...container.querySelectorAll("li:not(.dragging)")];
+
+  return elements.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+
+    if (offset < 0 && offset > closest.offset) {
+      return { offset: offset, element: child };
+    } else {
+      return closest;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+// 엔터 입력
+input.addEventListener("keypress", e => {
+  if (e.key === "Enter") addItem();
+});
+</script>
 </body>
 </html>
