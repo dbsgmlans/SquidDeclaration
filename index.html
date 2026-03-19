@@ -7,7 +7,6 @@
   <style>
     body {
       font-family: Arial;
-      /* 🎨 카툰 느낌 바다 (그라데이션) */
       background: linear-gradient(to bottom, #4facfe, #00c6ff, #0072ff);
       color: white;
       display: flex;
@@ -15,7 +14,6 @@
       margin-top: 50px;
     }
 
-    /* 🔥 가로 길이 2배 느낌 */
     .container {
       width: 700px;
       background: rgba(0, 0, 0, 0.75);
@@ -54,7 +52,6 @@
       margin-top: 20px;
     }
 
-    /* 🔥 어록 블록도 넓게 */
     li {
       background: #1e1e1e;
       padding: 12px;
@@ -90,29 +87,51 @@
     const input = document.getElementById("input");
     const list = document.getElementById("list");
 
+    // 🔥 저장된 데이터 불러오기
+    let items = JSON.parse(localStorage.getItem("quotes")) || [];
+
+    function saveItems() {
+      localStorage.setItem("quotes", JSON.stringify(items));
+    }
+
+    function render() {
+      list.innerHTML = "";
+      items.forEach((text, index) => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <span>${text}</span>
+          <span class="delete" onclick="removeItem(${index})">삭제</span>
+        `;
+        list.appendChild(li);
+      });
+    }
+
     function addItem() {
       const text = input.value.trim();
       if (text === "") return;
 
-      const li = document.createElement("li");
-      li.innerHTML = `
-        <span>${text}</span>
-        <span class="delete" onclick="removeItem(this)">삭제</span>
-      `;
+      items.unshift(text); // 최신 위
+      saveItems();
+      render();
 
-      list.prepend(li);
       input.value = "";
     }
 
-    function removeItem(el) {
-      el.parentElement.remove();
+    function removeItem(index) {
+      items.splice(index, 1);
+      saveItems();
+      render();
     }
 
+    // 엔터 입력
     input.addEventListener("keypress", function(e) {
       if (e.key === "Enter") {
         addItem();
       }
     });
+
+    // 🔥 처음 실행 시 렌더링
+    render();
   </script>
 </body>
 </html>
